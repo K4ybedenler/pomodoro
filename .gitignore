@@ -1,0 +1,9 @@
+# CMake-generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+pomodoro_autogen/
+.qt/
+
+pomodoro
