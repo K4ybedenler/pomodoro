@@ -8,8 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 qt_standard_project_setup()
 
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+set(SOURCES
+    src/main.cpp
+    src/timer.cpp
+)
+
 qt_add_executable(pomodoro
-    main.cpp
+    ${SOURCES}
 )
 
 target_link_libraries(pomodoro PRIVATE Qt6::Core)
