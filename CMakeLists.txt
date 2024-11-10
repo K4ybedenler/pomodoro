@@ -19,4 +19,4 @@ qt_add_executable(pomodoro
     ${SOURCES}
 )
 
-target_link_libraries(pomodoro PRIVATE Qt6::Core)
+target_link_libraries(pomodoro PRIVATE Qt6::Core sqlite3)
