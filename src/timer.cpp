@@ -16,27 +16,66 @@ pomo_timer::pomo_timer() {
             std::cerr << "can't open the db: " << sqlite3_errmsg(db) << std::endl;
     }
 
-    const char *sql = "CREATE TABLE IF NOT EXISTS pomodoro ("
+    const char *sql_launches = "CREATE TABLE IF NOT EXISTS launches ("
         "launch_id INTEGER PRIMARY KEY, "
-        "launch_time TEXT, "
-        "round_finish TEXT, "
-        "launch_time_finish TEXT);";
+        "start_time INTEGER, "
+        "finish_time INTEGER);";
 
-    if(sqlite3_exec(db, sql, 0, 0, &errMsg) != SQLITE_OK) {
+    const char *sql_rounds = "CREATE TABLE IF NOT EXISTS rounds ("
+        "round_id INTEGER PRIMARY KEY, "
+        "launch_id INTEGER, "
+        "round_number INTEGER, "
+        "start_time INTEGER, "
+        "finish_time INTEGER);";
+
+    if (sqlite3_exec(db, sql_launches, 0, 0, &errMsg) != SQLITE_OK) {
         std::cerr << "SQL error: " << errMsg << std::endl;
         sqlite3_free(errMsg);
+        sqlite3_close(db);
+    }
+
+    if (sqlite3_exec(db, sql_rounds, 0, 0, &errMsg) != SQLITE_OK) {
+        std::cerr << "SQL error: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        sqlite3_close(db);
+    }
+
+    if (sqlite3_prepare_v2(db, insert_launch, -1, &stmt_launches, 0) != SQLITE_OK) {
+        std::cerr << "failed to prepare SQL statement(command): " << sqlite3_errmsg(db) << std::endl;
+    }
+
+    if (sqlite3_prepare_v2(db, insert_round, -1, &stmt_rounds, 0) != SQLITE_OK) {
+        std::cerr << "failed to prepare SQL statement(command): " << sqlite3_errmsg(db) << std::endl;
     }
 };
 
 pomo_timer::~pomo_timer() {
+    sqlite3_finalize(stmt_launches);
+    sqlite3_finalize(stmt_rounds);
     sqlite3_close(db);
 }
 
 void pomo_timer::print_duration(std::chrono::duration<double> duration)
 {
-    std::cout << "\rIt took me ";
+    std::cout << "\rit took me ";
     std::cout << std::setprecision(5) << std::fixed << duration.count();
     std::cout << " seconds." << std::endl;
+}
+
+void pomo_timer::bind_statement(sqlite3_stmt *stmt,
+        int column_number,
+        std::chrono::system_clock::time_point time_point)
+{
+    sqlite3_int64 sqlite_time_point = std::chrono::duration_cast<std::chrono::milliseconds>(
+            time_point.time_since_epoch()
+            ).count();
+    sqlite3_bind_int64(stmt, column_number, sqlite_time_point);
+}
+
+void pomo_timer::push_statement(sqlite3_stmt *stmt) {
+    sqlite3_step(stmt);
+    sqlite3_reset(stmt);
+    sqlite3_clear_bindings(stmt);
 }
 
 void pomo_timer::update_timer() {
@@ -54,10 +93,11 @@ bool pomo_timer::check_status() {
 
 void pomo_timer::start_pomo() {
     started = true;
-    start_time = std::chrono::steady_clock::now();
-    round_finish_time = start_time;
+    round_finish_time = start_time = std::chrono::steady_clock::now();
+    round_finish_time_db = start_time_db = std::chrono::system_clock::now();
     std::thread timer_thread(&pomo_timer::update_timer, this);
-    timer_thread.detach();
+    timer_thread.detach(); 
+    bind_statement(stmt_launches, 2, start_time_db);
 }
 
 void pomo_timer::finish_round() {
@@ -74,11 +114,14 @@ void pomo_timer::pause_pomo() {
 
 void pomo_timer::stop_pomo() {
     auto current_time = std::chrono::steady_clock::now();
+    finish_time = std::chrono::system_clock::now();
     auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(
             current_time - start_time
             );
     round_finish_time = std::chrono::steady_clock::now();
     print_duration(time_span);
+    bind_statement(stmt_launches, 3, finish_time);
+    push_statement(stmt_launches);
     started = false;
 }
 
