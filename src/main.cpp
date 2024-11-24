@@ -51,7 +51,6 @@ int main(int argc, char *argv[]) {
                 std::cout << "\n\n";
                 reset_input_mode(orig);
                 delete timer;
-                timer = nullptr;
                 return 0;
             default:
                 std::cout << "hah, am fucked\n"; 

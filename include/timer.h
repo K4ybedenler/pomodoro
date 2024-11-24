@@ -2,6 +2,7 @@
 #define TIMER_H
 
 #include <chrono>
+#include <thread>
 #include <atomic>
 #include "sqlite3.h"
 #include "termios.h"
@@ -11,16 +12,16 @@ extern std::atomic<bool> quit;
 class pomo_timer {
     std::chrono::steady_clock::time_point start_time, round_finish_time;
     std::chrono::system_clock::time_point start_time_db, round_finish_time_db, finish_time;
-    bool started = false;
-    void print_duration(long int duration);
-    void print_duration(std::chrono::duration<double> duration);
+    std::atomic<bool> started{false};
+    void print_duration(long long int duration);
     void update_timer();
     void db_prepare(const char *table_name);
     void query_prepare(const char *query_tmpl, sqlite3_stmt *&stmt);
     sqlite3 *db;
+    std::thread timer_thread;
     sqlite3_int64 last_id;
     sqlite3_stmt *stmt_launches, *stmt_rounds, *stmt_last_id;
-    int round_number;
+    int round_number = 1;
     void bind_statement(sqlite3_stmt *stmt,
             int column_number,
             std::chrono::system_clock::time_point time_point);
