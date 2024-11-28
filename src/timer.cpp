@@ -5,7 +5,9 @@
 #include <thread>
 #include <chrono>
 #include <termios.h>
+#include <stdlib.h>
 #include "sqlite3.h"
+#include "fstream"
 
 std::atomic<bool> quit(false);
 
@@ -29,8 +31,6 @@ pomo_timer::pomo_timer() {
     query_prepare(insert_launch, stmt_launches);
     query_prepare(insert_round, stmt_rounds);
     query_prepare(last_launch_id, stmt_last_id);
-
-//    round_number = 1;
 };
 
 pomo_timer::~pomo_timer() {
@@ -202,3 +202,51 @@ void reset_input_mode(struct termios &orig) {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig);
 }
 
+void pomodoro() {
+    struct termios orig;
+    tcgetattr(STDIN_FILENO, &orig);
+    set_input_mode();
+    pomo_timer *timer = nullptr;
+    
+    while (!quit) {
+        char input = std::cin.get();
+        switch (input) {
+            case 's':
+                if (timer == nullptr) {
+                    timer = new pomo_timer;
+                    pomo_timer::output_hello(input);
+                    timer->start_pomo();
+                } else {
+                    std::cout << "already started\n";
+                }
+                break;
+            case 'r':
+                if (timer && timer->check_status()) {
+                    pomo_timer::output_hello(input);
+                    timer->finish_round();
+                } else {
+                    std::cout << "start before make a round\n";
+                }
+                break;
+            case 'p':
+                if (timer && timer->check_status()) {
+                    pomo_timer::output_hello(input);
+                    timer->stop_pomo();
+                    delete timer;
+                    timer = nullptr;
+                } else {
+                    std::cout << "start before stop\n";
+                }
+                break;
+            case 'q':
+                std::cout << "\n\n";
+                reset_input_mode(orig);
+                delete timer;
+                exit(0);
+            default:
+                std::cout << "hah, am fucked\n"; 
+        }
+    }
+
+    reset_input_mode(orig);
+}

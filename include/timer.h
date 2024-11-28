@@ -56,6 +56,7 @@ class pomo_timer {
 
 void set_input_mode();
 void reset_input_mode(struct termios &orig);
+void pomodoro();
 
 #endif
 
