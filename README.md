@@ -1,3 +1,3 @@
-![Description](screenshots/image.png)
+![Description](screenshots/pomodoro.png)
 
 # pomodoro
